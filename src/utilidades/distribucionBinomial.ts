@@ -123,22 +123,36 @@ export const distribucionBinomialCompleta = (n: number, p: number) => {
 };
 
 /**
- * Calcula la media (esperanza) de la distribución binomial
+ * Calcula la media de la distribución binomial
  * Para población infinita: E(X) = n × p
+ * Para población finita: es la misma E(X) = n × p
  */
-export const calcularMedia = (n: number, p: number) => {
+export const calcularMedia = (n: number, p: number, N?: number) => {
   const media = n * p;
+  const esFinita = N !== undefined && N !== null;
+  
+  const pasos = [
+    {
+      nombre: 'Media de la Distribución Binomial',
+      formula: 'E(X) = n × p',
+      resultado: media,
+      explicacion: `${n} × ${p} = ${media}`
+    }
+  ];
+  
+  if (esFinita) {
+    pasos.push({
+      nombre: 'Nota',
+      formula: 'La media es igual tanto para población finita como infinita',
+      resultado: media,
+      explicacion: `E(X) = ${media} (sin cambios por tipo de población)`
+    });
+  }
   
   return {
     valor: media,
-    pasos: [
-      {
-        nombre: 'Media de la Distribución Binomial',
-        formula: 'E(X) = n × p',
-        resultado: media,
-        explicacion: `${n} × ${p} = ${media}`
-      }
-    ]
+    esFinita,
+    pasos
   };
 };
 
@@ -204,6 +218,7 @@ export const calcularDesviacionEstandarFinita = (n: number, p: number, N: number
   
   return {
     valor: desviacionEstandar,
+    varianza: varianzaFinita,
     pasos: [
       {
         nombre: 'Varianza (población infinita)',
@@ -231,4 +246,123 @@ export const calcularDesviacionEstandarFinita = (n: number, p: number, N: number
       }
     ]
   };
+};
+
+/**
+ * Calcula el factor de corrección para población finita
+ * Fórmula: FC = (N-n)/(N-1)
+ */
+export const calcularFactorCorreccion = (n: number, N: number) => {
+  if (N <= n) throw new Error('El tamaño de la población (N) debe ser mayor que el tamaño de la muestra (n)');
+  
+  const factorCorrecion = (N - n) / (N - 1);
+  
+  return {
+    valor: factorCorrecion,
+    pasos: [
+      {
+        nombre: 'Factor de Corrección para Población Finita',
+        formula: 'FC = (N - n) / (N - 1)',
+        resultado: factorCorrecion,
+        explicacion: `(${N} - ${n}) / (${N} - 1) = ${factorCorrecion}`
+      },
+      {
+        nombre: 'Interpretación',
+        formula: 'Factor de corrección',
+        resultado: factorCorrecion,
+        explicacion: `Este factor se multiplica por la varianza. Valores cercanos a 1 indican poca corrección (muestra pequeña respecto a población)`
+      }
+    ]
+  };
+};
+
+/**
+ * Calcula el sesgo (skewness) de la distribución binomial
+ * Fórmula infinita: γ = (1 - 2p) / √(n*p*(1-p))
+ */
+export const calcularSesgo = (n: number, p: number, N?: number) => {
+  const q = 1 - p;
+  const varianza = n * p * q;
+  const desviacion = Math.sqrt(varianza);
+  const sesgo = (1 - 2 * p) / desviacion;
+  
+  const esFinita = N !== undefined && N !== null;
+  
+  const pasos = [
+    {
+      nombre: 'Cálculo del Sesgo',
+      formula: 'γ = (1 - 2p) / √(n*p*(1-p))',
+      resultado: sesgo,
+      explicacion: `(1 - 2×${p}) / √${varianza} = ${sesgo.toFixed(6)}`
+    }
+  ];
+  
+  const clasificacion = clasificarSesgo(sesgo);
+  
+  return {
+    valor: sesgo,
+    esFinita,
+    clasificacion,
+    pasos
+  };
+};
+
+/**
+ * Clasifica el sesgo como negativo, neutro o positivo
+ */
+export const clasificarSesgo = (sesgo: number): string => {
+  const threshold = 0.05;
+  
+  if (Math.abs(sesgo) < threshold) {
+    return 'Sesgo Neutro (Distribución Simétrica)';
+  } else if (sesgo < 0) {
+    return 'Sesgo Negativo (Asimetría a la Izquierda)';
+  } else {
+    return 'Sesgo Positivo (Asimetría a la Derecha)';
+  }
+};
+
+/**
+ * Calcula la curtosis (kurtosis) de la distribución binomial
+ * Fórmula: κ = (1 - 6*p*(1-p)) / (n*p*(1-p))
+ */
+export const calcularCurtosis = (n: number, p: number, N?: number) => {
+  const q = 1 - p;
+  const varianza = n * p * q;
+  const curtosis = (1 - 6 * p * q) / varianza;
+  
+  const esFinita = N !== undefined && N !== null;
+  
+  const pasos = [
+    {
+      nombre: 'Cálculo de la Curtosis',
+      formula: 'κ = (1 - 6*p*(1-p)) / (n*p*(1-p))',
+      resultado: curtosis,
+      explicacion: `(1 - 6×${p}×${q}) / ${varianza} = ${curtosis.toFixed(6)}`
+    }
+  ];
+  
+  const clasificacion = clasificarCurtosis(curtosis);
+  
+  return {
+    valor: curtosis,
+    esFinita,
+    clasificacion,
+    pasos
+  };
+};
+
+/**
+ * Clasifica la curtosis como Platicúrtica, Mesocúrtica o Leptocúrtica
+ */
+export const clasificarCurtosis = (curtosis: number): string => {
+  const threshold = 0.1;
+  
+  if (curtosis < -threshold) {
+    return 'Platicúrtica (Curva Aplanada - Curtosis Negativa)';
+  } else if (Math.abs(curtosis) <= threshold) {
+    return 'Mesocúrtica (Campana de Gauss - Curtosis Cero)';
+  } else {
+    return 'Leptocúrtica (Curva Elevada - Curtosis Positiva)';
+  }
 };

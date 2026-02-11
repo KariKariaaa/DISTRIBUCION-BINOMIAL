@@ -4,6 +4,9 @@ import {
   calcularMedia,
   calcularDesviacionEstandar,
   calcularDesviacionEstandarFinita,
+  calcularFactorCorreccion,
+  calcularSesgo,
+  calcularCurtosis,
   esPopulacionInfinita,
   probabilidadBinomial
 } from '../utilidades/distribucionBinomial';
@@ -32,7 +35,7 @@ export default function ComponenteFormulario() {
       const probK = probabilidadBinomial(n, k, p);
       
       // Calcular media
-      const media = calcularMedia(n, p);
+      const media = calcularMedia(n, p, N);
       
       // Calcular desviación estándar
       let desviacion;
@@ -41,6 +44,18 @@ export default function ComponenteFormulario() {
       } else {
         desviacion = calcularDesviacionEstandarFinita(n, p, N!);
       }
+      
+      // Calcular factor de corrección (si es población finita)
+      let factorCorreccion = null;
+      if (!infinita && N) {
+        factorCorreccion = calcularFactorCorreccion(n, N);
+      }
+      
+      // Calcular sesgo
+      const sesgo = calcularSesgo(n, p, N);
+      
+      // Calcular curtosis
+      const curtosis = calcularCurtosis(n, p, N);
       
       setResultados({
         n,
@@ -51,7 +66,10 @@ export default function ComponenteFormulario() {
         distribucion,
         probK,
         media,
-        desviacion
+        desviacion,
+        factorCorreccion,
+        sesgo,
+        curtosis
       });
       
       setMostrarPasos(false);
@@ -99,7 +117,7 @@ export default function ComponenteFormulario() {
                   type="number"
                   min="0"
                   max="1"
-                  step="0.01"
+                  step="0.0001"
                   value={p}
                   onChange={(e) => setP(Number(e.target.value))}
                   className="w-full px-4 py-2 border-2 border-[#3A86FF] rounded-lg focus:outline-none focus:border-[#9D4EDD]"
