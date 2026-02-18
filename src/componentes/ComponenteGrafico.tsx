@@ -19,21 +19,33 @@ interface DatosGrafico {
 interface ComponenteGraficoProps {
   datos: DatosGrafico[];
   k: number;
+  k2?: number;
+  rango?: any;
   p: number;
 }
 
-export default function ComponenteGrafico({ datos, k, p }: ComponenteGraficoProps) {
+export default function ComponenteGrafico({ datos, k, k2}: ComponenteGraficoProps) {
   const maxProbabilidad = Math.max(...datos.map(d => d.probabilidad));
   
   // Encontrar el rango de k a mostrar (máximo 25 barras para mejor visualización)
-  const inicio = Math.max(0, k - 5);
-  const fin = Math.min(datos.length - 1, k + 15);
+  const inicio = Math.max(0, (k2 || k) - 5);
+  const fin = Math.min(datos.length - 1, (k2 || k) + 15);
   const datosVisibles = datos.slice(inicio, fin + 1).map((d) => ({
     ...d,
     nombre: `X=${d.k}`,
   }));
 
-  const coloresBarras = datosVisibles.map((d) => (d.k === k ? '#9D4EDD' : '#3A86FF'));
+  const coloresBarras = datosVisibles.map((d) => {
+    // Si hay rango, colorear todos los valores del rango
+    if (k2 && d.k >= k && d.k <= k2) {
+      return '#9D4EDD';
+    }
+    // Si no hay rango, solo colorear el k seleccionado
+    if (!k2 && d.k === k) {
+      return '#9D4EDD';
+    }
+    return '#3A86FF';
+  });
 
   return (
     <div className="bg-white rounded-lg shadow-xl p-6 border-l-4 border-[#9D4EDD]">
@@ -65,7 +77,7 @@ export default function ComponenteGrafico({ datos, k, p }: ComponenteGraficoProp
               />
               <Legend />
               <Bar dataKey="probabilidad" name="Probabilidad" radius={[8, 8, 0, 0]}>
-                {datosVisibles.map((entry, index) => (
+                {datosVisibles.map((_entry, index) => (
                   <Cell key={`cell-${index}`} fill={coloresBarras[index]} />
                 ))}
               </Bar>

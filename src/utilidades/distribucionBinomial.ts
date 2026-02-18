@@ -34,15 +34,23 @@ export const coeficienteBinomial = (n: number, k: number): number => {
  * - La muestra no excede el 5% de la población (n/N <= 0.05)
  * - No existe población (N = null/undefined)
  */
-export const esPopulacionInfinita = (tamanioMuestra: number, tamanioParenta?: number): boolean => {
-  if (tamanioParenta === undefined || tamanioParenta === null) {
+export const esPopulacionInfinita = (muestra: number, poblacion?: number): boolean => {
+  if (poblacion === undefined || poblacion === null) {
     return true; // No existe población
   }
   
-  const porcentaje = tamanioMuestra / tamanioParenta;
-  return porcentaje <= 0.05;
+  const porcentaje = muestra / poblacion;
+  return porcentaje <= 0.05; // Muestra no excede el 5% de la población
 };
 
+export const esHipergeometica = (muestra: number, poblacion?: number): boolean => {
+  if (poblacion === undefined || poblacion === null) {
+    return true; // No existe población
+  }
+  
+  const porcentaje = muestra / poblacion;
+  return porcentaje < 0.20;
+};
 /**
  * Calcula la probabilidad de exactamente k éxitos en n ensayos
  * Fórmula: P(X = k) = C(n, k) × p^k × (1-p)^(n-k)
@@ -323,6 +331,21 @@ export const clasificarSesgo = (sesgo: number): string => {
 };
 
 /**
+ * Clasifica la curtosis como Platicúrtica, Mesocúrtica o Leptocúrtica
+ */
+export const clasificarCurtosis = (curtosis: number): string => {
+  const threshold = 0.1;
+  
+  if (curtosis < -threshold) {
+    return 'Platicúrtica (Curva Aplanada - Curtosis Negativa)';
+  } else if (Math.abs(curtosis) <= threshold) {
+    return 'Mesocúrtica (Campana de Gauss - Curtosis Cero)';
+  } else {
+    return 'Leptocúrtica (Curva Elevada - Curtosis Positiva)';
+  }
+};
+
+/**
  * Calcula la curtosis (kurtosis) de la distribución binomial
  * Fórmula: κ = (1 - 6*p*(1-p)) / (n*p*(1-p))
  */
@@ -353,16 +376,41 @@ export const calcularCurtosis = (n: number, p: number, N?: number) => {
 };
 
 /**
- * Clasifica la curtosis como Platicúrtica, Mesocúrtica o Leptocúrtica
+ * Calcula la probabilidad para un rango de valores de k
+ * Fórmula: P(k1 ≤ X ≤ k2) = Σ P(X=k) para k desde k1 hasta k2
  */
-export const clasificarCurtosis = (curtosis: number): string => {
-  const threshold = 0.1;
+export const probabilidadRango = (n: number, k1: number, k2: number, p: number) => {
+  if (k1 > k2) throw new Error('k1 debe ser menor o igual a k2');
+  if (k2 > n) throw new Error('k2 debe ser menor o igual a n');
+  if (k1 < 0) throw new Error('k1 debe ser mayor o igual a 0');
   
-  if (curtosis < -threshold) {
-    return 'Platicúrtica (Curva Aplanada - Curtosis Negativa)';
-  } else if (Math.abs(curtosis) <= threshold) {
-    return 'Mesocúrtica (Campana de Gauss - Curtosis Cero)';
-  } else {
-    return 'Leptocúrtica (Curva Elevada - Curtosis Positiva)';
+  let probabilidadTotal = 0;
+  const detalles = [];
+  
+  for (let k = k1; k <= k2; k++) {
+    const calculo = probabilidadBinomial(n, k, p);
+    probabilidadTotal += calculo.probabilidad;
+    detalles.push({
+      k,
+      probabilidad: calculo.probabilidad,
+      porcentaje: calculo.probabilidad * 100
+    });
   }
+  
+  return {
+    probabilidad: probabilidadTotal,
+    k1,
+    k2,
+    detalles,
+    pasos: [
+      {
+        nombre: 'Probabilidad de Rango',
+        formula: `P(${k1} ≤ X ≤ ${k2}) = Σ P(X=k) para k=${k1} a ${k2}`,
+        resultado: probabilidadTotal,
+        explicacion: `Suma de probabilidades: ${detalles.map(d => d.probabilidad.toFixed(6)).join(' + ')} = ${probabilidadTotal}`
+      }
+    ]
+  };
 };
+
+
