@@ -10,7 +10,9 @@ import {
   calcularCurtosis,
   esPopulacionInfinita,
   probabilidadBinomial,
-  esHipergeometica
+  esHipergeometica,
+  probabilidadAcumuladaBinomial,
+  probabilidadComplementariaBinomial
 } from '../utilidades/distribucionBinomial';
 import {
   distribucionHipergeometricaCompleta,
@@ -18,7 +20,9 @@ import {
   calcularMediaHipergeometrica,
   calcularDesviacionEstandarHipergeometrica,
   calcularSesgoHipergeometrica,
-  calcularCurtosisHipergeometrica
+  calcularCurtosisHipergeometrica,
+  probabilidadAcumuladaHipergeometrica,
+  probabilidadComplementariaHipergeometrica
 } from '../utilidades/hipergeometrica';
 import ComponenteResultados from './ComponenteResultados';
 import ComponenteGrafico from './ComponenteGrafico';
@@ -33,6 +37,7 @@ export default function ComponenteModuloDatos({ onVolverAlCalculador }: { onVolv
   const [columnasDisponibles, setColumnasDisponibles] = useState<string[]>([]);
   const [columnaSeleccionada, setColumnaSeleccionada] = useState<string>('');
   const [frecuencias, setFrecuencias] = useState<{ [key: string]: number }>({});
+  const [valoresSeleccionados, setValoresSeleccionados] = useState<Set<string>>(new Set());
   const [N, setN] = useState<number>();
   const [K, setK] = useState<number>();
   const [n, setN_muestra] = useState<number>(10);
@@ -138,8 +143,31 @@ export default function ComponenteModuloDatos({ onVolverAlCalculador }: { onVolv
       freq[valor] = (freq[valor] || 0) + 1;
     });
 
+    // N es el total de filas
+    const totalFilas = datosArchivo.datos.length;
+    setN(totalFilas);
     setFrecuencias(freq);
+    setValoresSeleccionados(new Set());
+    setK(undefined);
     setMostrarResultados(false);
+  };
+
+  // Seleccionar múltiples valores de éxito y calcular K automáticamente
+  const handleToggleValor = (valor: string) => {
+    const nuevosValores = new Set(valoresSeleccionados);
+    if (nuevosValores.has(valor)) {
+      nuevosValores.delete(valor);
+    } else {
+      nuevosValores.add(valor);
+    }
+    setValoresSeleccionados(nuevosValores);
+    
+    // Calcular K como suma de frecuencias de valores seleccionados
+    let totalK = 0;
+    nuevosValores.forEach(v => {
+      totalK += frecuencias[v] || 0;
+    });
+    setK(totalK > 0 ? totalK : undefined);
   };
 
   // Calcular probabilidades
@@ -149,8 +177,8 @@ export default function ComponenteModuloDatos({ onVolverAlCalculador }: { onVolv
       return;
     }
 
-    if (N === undefined || K === undefined) {
-      alert('Por favor ingresa el tamaño de la población (N) y cantidad de éxitos (K)');
+    if (N === undefined || K === undefined || valoresSeleccionados.size === 0) {
+      alert('Por favor selecciona al menos un valor que cumpla la condición de éxito');
       return;
     }
 
@@ -159,20 +187,43 @@ export default function ComponenteModuloDatos({ onVolverAlCalculador }: { onVolv
       return;
     }
 
-    if (x < 0 || x > n) {
-      alert('x debe estar entre 0 y n');
-      return;
+    // Validación para hipergeométrica
+    const usarHipergeometrica = !esHipergeometica(n, N);
+    if (usarHipergeometrica) {
+      // En hipergeométrica, k debe estar en un rango válido
+      const kMin = Math.max(0, n - (N - K));
+      const kMax = Math.min(n, K);
+      
+      if (x < kMin || x > kMax) {
+        alert(
+          `❌ Valor inválido para x\n\n` +
+          `Con estos parámetros:\n` +
+          `N = ${N}, M = ${K}, n = ${n}\n\n` +
+          `x debe estar entre ${kMin} y ${kMax}\n\n` +
+          `Por qué: Con una población de ${N} elementos, ${K} éxitos y ${N - K} fracasos,\n` +
+          `si tomas una muestra de ${n} elementos, el número de éxitos\n` +
+          `debe estar entre ${kMin} y ${kMax}.`
+        );
+        return;
+      }
+    } else {
+      // Para binomial, x debe estar entre 0 y n
+      if (x < 0 || x > n) {
+        alert('x debe estar entre 0 y n');
+        return;
+      }
     }
 
     try {
       // Determinar si usar hipergeométrica o binomial
-      const usarHipergeometrica = !esHipergeometica(n, N);
       const p = K / N; // Probabilidad estimada
 
       if (usarHipergeometrica) {
         // Hipergeométrica
         const distribucion = distribucionHipergeometricaCompleta(N, K, n);
         const probX = probabilidadHipergeometrica(N, K, n, x);
+        const probAcumulada = probabilidadAcumuladaHipergeometrica(N, K, n, x);
+        const probComplementaria = probabilidadComplementariaHipergeometrica(N, K, n, x);
         const media = calcularMediaHipergeometrica(N, K, n);
         const desviacion = calcularDesviacionEstandarHipergeometrica(N, K, n);
         const sesgo = calcularSesgoHipergeometrica(N, K, n);
@@ -186,12 +237,15 @@ export default function ComponenteModuloDatos({ onVolverAlCalculador }: { onVolv
           esHipergeometrica: true,
           distribucion,
           probK: probX,
+          probAcumulada,
+          probComplementaria,
           media,
           desviacion,
           sesgo,
           curtosis,
           columna: columnaSeleccionada,
           frecuencias,
+          valoresSeleccionados: Array.from(valoresSeleccionados),
           p: null
         });
       } else {
@@ -199,6 +253,8 @@ export default function ComponenteModuloDatos({ onVolverAlCalculador }: { onVolv
         const infinita = esPopulacionInfinita(n, N);
         const distribucion = distribucionBinomialCompleta(n, p);
         const probX = probabilidadBinomial(n, x, p);
+        const probAcumulada = probabilidadAcumuladaBinomial(n, x, p);
+        const probComplementaria = probabilidadComplementariaBinomial(n, x, p);
         const media = calcularMedia(n, p, N);
         let desviacion;
         if (infinita) {
@@ -218,12 +274,15 @@ export default function ComponenteModuloDatos({ onVolverAlCalculador }: { onVolv
           esHipergeometrica: false,
           distribucion,
           probK: probX,
+          probAcumulada,
+          probComplementaria,
           media,
           desviacion,
           sesgo,
           curtosis,
           columna: columnaSeleccionada,
-          frecuencias
+          frecuencias,
+          valoresSeleccionados: Array.from(valoresSeleccionados)
         });
       }
 
@@ -300,37 +359,58 @@ export default function ComponenteModuloDatos({ onVolverAlCalculador }: { onVolv
               {/* Parámetros */}
               {columnaSeleccionada && (
                 <div>
-                  <h3 className="text-lg font-bold text-[#9D4EDD] mb-3">3. Parámetros Probabilísticos</h3>
+                  <h3 className="text-lg font-bold text-[#9D4EDD] mb-3">3. Definir Éxito y Calcular Parámetros</h3>
 
-                  <div className="mb-4">
+                  <div className="mb-4 p-3 bg-green-100 rounded-lg border-l-4 border-green-500">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      N (Tamaño de Población):
+                      ✓ N (Tamaño de Población):
                     </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={N || ''}
-                      onChange={(e) => setN(e.target.value ? Number(e.target.value) : undefined)}
-                      placeholder="Ej: 100"
-                      className="w-full px-3 py-2 border-2 border-[#3A86FF] rounded-lg focus:outline-none focus:border-[#9D4EDD]"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Total de elementos en tu conjunto de datos</p>
+                    <div className="text-3xl font-bold text-green-600">{N}</div>
+                    <p className="text-xs text-gray-600 mt-1">Calculado automáticamente: {N} filas</p>
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      K (Cantidad de Éxitos en Población):
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Selecciona qué valores son "Éxito" o "Cumplen la condición":
                     </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={K || ''}
-                      onChange={(e) => setK(e.target.value ? Number(e.target.value) : undefined)}
-                      placeholder="Ej: 25"
-                      className="w-full px-3 py-2 border-2 border-[#3A86FF] rounded-lg focus:outline-none focus:border-[#9D4EDD]"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Cantidad de elementos que cumplen la condición</p>
+                    <div className="bg-yellow-50 border-2 border-[#9D4EDD] rounded-lg p-4 space-y-2 max-h-48 overflow-y-auto">
+                      {Object.keys(frecuencias).length === 0 ? (
+                        <p className="text-gray-500 text-sm">No hay valores disponibles</p>
+                      ) : (
+                        Object.keys(frecuencias).map(valor => (
+                          <label key={valor} className="flex items-center gap-3 p-2 hover:bg-yellow-100 rounded cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={valoresSeleccionados.has(valor)}
+                              onChange={() => handleToggleValor(valor)}
+                              className="w-4 h-4 cursor-pointer accent-[#9D4EDD]"
+                            />
+                            <span className="text-sm font-semibold text-gray-700 flex-1">
+                              {valor}
+                            </span>
+                            <span className="text-xs bg-[#9D4EDD] text-white px-2 py-1 rounded">
+                              {frecuencias[valor]} registros
+                            </span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      ✓ Seleccionados: {valoresSeleccionados.size === 0 ? 'Ninguno' : Array.from(valoresSeleccionados).join(', ')}
+                    </p>
                   </div>
+
+                  {K !== undefined && valoresSeleccionados.size > 0 && (
+                    <div className="mb-4 p-3 bg-blue-100 rounded-lg border-l-4 border-blue-500">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        ✓ K (Cantidad de Éxitos):
+                      </label>
+                      <div className="text-3xl font-bold text-blue-600">{K}</div>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Calculado automáticamente: {K} de {N} cumplen con {valoresSeleccionados.size === 1 ? 'el valor' : 'los valores'} [{Array.from(valoresSeleccionados).join(', ')}]
+                      </p>
+                    </div>
+                  )}
 
                   <div className="mb-4">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -344,7 +424,7 @@ export default function ComponenteModuloDatos({ onVolverAlCalculador }: { onVolv
                       onChange={(e) => setN_muestra(Number(e.target.value))}
                       className="w-full px-3 py-2 border-2 border-[#3A86FF] rounded-lg focus:outline-none focus:border-[#9D4EDD]"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Cuántos elementos vas a verificar</p>
+                    <p className="text-xs text-gray-500 mt-1">Cuántos elementos vas a verificar (menor o igual a N)</p>
                   </div>
 
                   <div className="mb-6">
@@ -359,7 +439,7 @@ export default function ComponenteModuloDatos({ onVolverAlCalculador }: { onVolv
                       onChange={(e) => setX(Number(e.target.value))}
                       className="w-full px-3 py-2 border-2 border-[#3A86FF] rounded-lg focus:outline-none focus:border-[#9D4EDD]"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Cuántos éxitos esperas encontrar</p>
+                    <p className="text-xs text-gray-500 mt-1">Cuántos registros que cumplen la condición esperas encontrar en la muestra</p>
                   </div>
 
                   <button

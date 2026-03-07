@@ -3,15 +3,38 @@ interface ResultadosProps {
 }
 
 export default function ComponenteResultados({ resultados }: ResultadosProps) {
-  const { n, p, M, N, k, k2, infinita, esHipergeometrica, probK, rango, media, desviacion, factorCorreccion, sesgo, curtosis } = resultados;
+  const { n, p, M, N, k, k2, infinita, esHipergeometrica, esPoisson, lambda, probK, probAcumulada, probComplementaria, rango, media, desviacion, factorCorreccion, sesgo, curtosis } = resultados;
 
   return (
     <div className="space-y-4">
       {/* Información de población */}
       <div className="bg-white rounded-lg shadow-xl p-6 border-l-4 border-[#9D4EDD]">
-        <h3 className="text-xl font-bold text-[#9D4EDD] mb-4">Información de la Población / Muestra</h3>
+        <h3 className="text-xl font-bold text-[#9D4EDD] mb-4">Información de Parámetros</h3>
         <div className="grid grid-cols-2 gap-4">
-          {esHipergeometrica ? (
+          {esPoisson ? (
+            <>
+              <div className="bg-cyan-100 rounded-lg p-4">
+                <p className="text-gray-700 text-sm">Distribución</p>
+                <p className="text-xl font-bold text-[#9D4EDD]">Poisson</p>
+              </div>
+              <div className="rounded-lg p-4 bg-cyan-50">
+                <p className="text-gray-700 text-sm">Lambda (λ)</p>
+                <p className="text-xl font-bold text-[#9D4EDD]">{lambda.toFixed(4)}</p>
+              </div>
+              {n !== null && (
+                <>
+                  <div className="rounded-lg p-4">
+                    <p className="text-gray-700 text-sm">Ensayos (n)</p>
+                    <p className="text-xl font-bold text-[#9D4EDD]">{n}</p>
+                  </div>
+                  <div className="rounded-lg p-4">
+                    <p className="text-gray-700 text-sm">Probabilidad (p)</p>
+                    <p className="text-xl font-bold text-[#9D4EDD]">{(p * 100).toFixed(2)}%</p>
+                  </div>
+                </>
+              )}
+            </>
+          ) : esHipergeometrica ? (
             <>
               <div className="bg-yellow-100 rounded-lg p-4">
                 <p className="text-gray-700 text-sm">Distribución</p>
@@ -84,13 +107,49 @@ export default function ComponenteResultados({ resultados }: ResultadosProps) {
         ) : (
           <div>
             <h3 className="text-xl font-bold text-[#3A86FF] mb-4">
-              Probabilidad P(X = {k})
+              Análisis de Probabilidades para X = {k}
             </h3>
-            <div className="rounded-lg p-6 text-[#3A86FF]">
-              <p className="text-sm opacity-90">Resultado</p>
-              <p className="text-4xl font-bold">{(probK.probabilidad * 100).toFixed(4)}%</p>
-              <p className="text-lg mt-2">Decimal: {probK.probabilidad.toFixed(6)}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Probabilidad Puntual */}
+              <div className="bg-blue-50 rounded-lg p-6 border-l-4 border-[#3A86FF]">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Probabilidad Puntual</p>
+                <p className="text-2xl font-bold text-[#3A86FF]">P(X = {k})</p>
+                <p className="text-3xl font-bold text-[#3A86FF] mt-3">{(probK.probabilidad * 100).toFixed(4)}%</p>
+                <p className="text-xs text-gray-600 mt-2">Decimal: {probK.probabilidad.toFixed(6)}</p>
+              </div>
+
+              {/* Probabilidad Acumulada */}
+              {probAcumulada && (
+                <div className="bg-green-50 rounded-lg p-6 border-l-4 border-green-500">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Probabilidad Acumulada</p>
+                  <p className="text-2xl font-bold text-green-600">P(X ≤ {k})</p>
+                  <p className="text-3xl font-bold text-green-600 mt-3">{(probAcumulada.probabilidadAcumulada * 100).toFixed(4)}%</p>
+                  <p className="text-xs text-gray-600 mt-2">Decimal: {probAcumulada.probabilidadAcumulada.toFixed(6)}</p>
+                </div>
+              )}
+
+              {/* Probabilidad Complementaria */}
+              {probComplementaria && (
+                <div className="bg-red-50 rounded-lg p-6 border-l-4 border-red-500">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Probabilidad Complementaria</p>
+                  <p className="text-2xl font-bold text-red-600">P(X {'>'}  {k})</p>
+                  <p className="text-3xl font-bold text-red-600 mt-3">{(probComplementaria.probabilidadComplementaria * 100).toFixed(4)}%</p>
+                  <p className="text-xs text-gray-600 mt-2">Decimal: {probComplementaria.probabilidadComplementaria.toFixed(6)}</p>
+                </div>
+              )}
             </div>
+
+            {/* Explicación detallada */}
+            {probAcumulada && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg border-l-4 border-gray-400">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Interpretación:</p>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• <span className="font-semibold">P(X = {k}):</span> Probabilidad de exactamente {k} éxitos</li>
+                  <li>• <span className="font-semibold">P(X ≤ {k}):</span> Probabilidad de {k} éxitos o menos</li>
+                  <li>• <span className="font-semibold">P(X {'>'}  {k}):</span> Probabilidad de más de {k} éxitos</li>
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -101,7 +160,9 @@ export default function ComponenteResultados({ resultados }: ResultadosProps) {
         <div className="bg-white rounded-lg shadow-xl p-6 border-l-4 border-[#9D4EDD]">
           <h3 className="text-lg font-bold text-[#9D4EDD] mb-4">Media (Esperanza)</h3>
           <div className=" rounded-lg p-4">
-            <p className="text-sm text-gray-700">{esHipergeometrica ? 'E(X) = n × (M/N)' : 'E(X) = n × p'}</p>
+            <p className="text-sm text-gray-700">
+              {esPoisson ? 'E(X) = λ' : esHipergeometrica ? 'E(X) = n × (M/N)' : 'E(X) = n × p'}
+            </p>
             <p className="text-3xl font-bold text-[#9D4EDD] mt-2">{media.valor.toFixed(4)}</p>
           </div>
         </div>
@@ -110,7 +171,7 @@ export default function ComponenteResultados({ resultados }: ResultadosProps) {
         <div className="bg-white rounded-lg shadow-xl p-6 border-l-4 border-[#3A86FF]">
           <h3 className="text-lg font-bold text-[#3A86FF] mb-4">Desviación Estándar</h3>
           <div className="rounded-lg p-4">
-            <p className="text-sm text-gray-700">σ = √(Varianza)</p>
+            <p className="text-sm text-gray-700">{esPoisson ? 'σ = √λ' : 'σ = √(Varianza)'}</p>
             <p className="text-3xl font-bold text-[#3A86FF] mt-2">{desviacion.valor.toFixed(4)}</p>
           </div>
         </div>
@@ -134,7 +195,9 @@ export default function ComponenteResultados({ resultados }: ResultadosProps) {
         <div className="bg-white rounded-lg shadow-xl p-6 border-l-4 border-[#3A86FF]">
           <h3 className="text-lg font-bold text-[#3A86FF] mb-4">Sesgo (Skewness)</h3>
           <div className="rounded-lg p-4">
-            <p className="text-sm text-gray-700">{esHipergeometrica ? 'γ (Hipergeométrica)' : 'γ = (1 - 2p) / √(Varianza)'}</p>
+            <p className="text-sm text-gray-700">
+              {esPoisson ? 'γ = 1 / √λ' : esHipergeometrica ? 'γ (Hipergeométrica)' : 'γ = (1 - 2p) / √(Varianza)'}
+            </p>
             <p className="text-3xl font-bold text-[#3A86FF] mt-2">{sesgo.valor.toFixed(6)}</p>
             <div className="mt-3 p-2 bg-white rounded border-l-4 border-[#3A86FF]">
               <p className="text-sm font-bold text-[#3A86FF]">{sesgo.clasificacion}</p>
@@ -146,7 +209,9 @@ export default function ComponenteResultados({ resultados }: ResultadosProps) {
         <div className="bg-white rounded-lg shadow-xl p-6 border-l-4 border-[#9D4EDD]">
           <h3 className="text-lg font-bold text-[#9D4EDD] mb-4">Curtosis (Kurtosis)</h3>
           <div className="rounded-lg p-4">
-            <p className="text-sm text-gray-700">{esHipergeometrica ? 'κ (Hipergeométrica)' : 'κ = (1 - 6p(1-p)) / Varianza'}</p>
+            <p className="text-sm text-gray-700">
+              {esPoisson ? 'κ = 1 / λ' : esHipergeometrica ? 'κ (Hipergeométrica)' : 'κ = (1 - 6p(1-p)) / Varianza'}
+            </p>
             <p className="text-3xl font-bold text-[#9D4EDD] mt-2">{curtosis.valor.toFixed(6)}</p>
             <div className="mt-3 p-2 bg-white rounded border-l-4 border-[#9D4EDD]">
               <p className="text-sm font-bold text-[#9D4EDD]">{curtosis.clasificacion}</p>
@@ -162,11 +227,13 @@ export default function ComponenteResultados({ resultados }: ResultadosProps) {
           <p><span className="font-semibold text-[#FFA500]">Sesgo:</span> {sesgo.clasificacion}</p>
           <p><span className="font-semibold text-[#3A86FF]">Curtosis:</span> {curtosis.clasificacion}</p>
           <p className="text-xs text-gray-600 mt-4">
-            {esHipergeometrica 
-              ? 'Análisis para distribución HIPERGEOMÉTRICA (sin reemplazo)' 
-              : infinita 
-                ? 'Análisis para población INFINITA' 
-                : 'Análisis para población FINITA (con factor de corrección)'}
+            {esPoisson 
+              ? 'Análisis para distribución POISSON (eventos raros e independientes)' 
+              : esHipergeometrica 
+                ? 'Análisis para distribución HIPERGEOMÉTRICA (sin reemplazo)' 
+                : infinita 
+                  ? 'Análisis para población INFINITA' 
+                  : 'Análisis para población FINITA (con factor de corrección)'}
           </p>
         </div>
       </div>

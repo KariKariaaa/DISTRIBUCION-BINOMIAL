@@ -413,4 +413,76 @@ export const probabilidadRango = (n: number, k1: number, k2: number, p: number) 
   };
 };
 
+/**
+ * Calcula la probabilidad acumulada (CDF) de la distribución binomial
+ * Fórmula: P(X ≤ k) = Σ P(X=i) para i desde 0 hasta k
+ * 
+ * @param n - número de ensayos
+ * @param k - número máximo de éxitos
+ * @param p - probabilidad de éxito en cada ensayo
+ * @returns objeto con la probabilidad acumulada y detalles
+ */
+export const probabilidadAcumuladaBinomial = (n: number, k: number, p: number) => {
+  if (k < 0 || k > n) throw new Error('k debe estar entre 0 y n');
+  
+  let probabilidadTotal = 0;
+  const detalles = [];
+  
+  for (let i = 0; i <= k; i++) {
+    const calculo = probabilidadBinomial(n, i, p);
+    probabilidadTotal += calculo.probabilidad;
+    detalles.push({
+      k: i,
+      probabilidad: calculo.probabilidad,
+      porcentaje: calculo.probabilidad * 100,
+      acumulada: probabilidadTotal,
+      porcentajeAcumulado: probabilidadTotal * 100
+    });
+  }
+  
+  return {
+    k,
+    probabilidadAcumulada: probabilidadTotal,
+    porcentajeAcumulado: probabilidadTotal * 100,
+    detalles,
+    pasos: [
+      {
+        nombre: 'Probabilidad Acumulada',
+        formula: `P(X ≤ ${k}) = Σ P(X=i) para i=0 a ${k}`,
+        resultado: probabilidadTotal,
+        explicacion: `Suma acumulada de ${detalles.length} probabilidades = ${probabilidadTotal.toFixed(6)}`
+      }
+    ]
+  };
+};
+
+/**
+ * Calcula la probabilidad complementaria (cola derecha) de la distribución binomial
+ * Fórmula: P(X > k) = 1 - P(X ≤ k)
+ * 
+ * @param n - número de ensayos
+ * @param k - número máximo de éxitos
+ * @param p - probabilidad de éxito en cada ensayo
+ * @returns objeto con la probabilidad complementaria
+ */
+export const probabilidadComplementariaBinomial = (n: number, k: number, p: number) => {
+  const acumulada = probabilidadAcumuladaBinomial(n, k, p);
+  const probabilidadComplementaria = 1 - acumulada.probabilidadAcumulada;
+  
+  return {
+    k,
+    probabilidadComplementaria,
+    porcentajeComplementario: probabilidadComplementaria * 100,
+    probabilidadAcumulada: acumulada.probabilidadAcumulada,
+    pasos: [
+      {
+        nombre: 'Probabilidad Complementaria',
+        formula: `P(X > ${k}) = 1 - P(X ≤ ${k})`,
+        resultado: probabilidadComplementaria,
+        explicacion: `1 - ${acumulada.probabilidadAcumulada.toFixed(6)} = ${probabilidadComplementaria.toFixed(6)}`
+      }
+    ]
+  };
+};
+
 

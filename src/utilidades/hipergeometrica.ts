@@ -348,3 +348,80 @@ export const probabilidadRangoHipergeometrica = (N: number, M: number, n: number
     ]
   };
 };
+
+/**
+ * Calcula la probabilidad acumulada (CDF) de la distribución hipergeométrica
+ * Fórmula: P(X ≤ k) = Σ P(X=i) para i desde kMin hasta k
+ * 
+ * @param N - tamaño total de la población
+ * @param M - número de elementos de éxito en la población
+ * @param n - tamaño de la muestra
+ * @param k - número máximo de éxitos deseados
+ * @returns objeto con la probabilidad acumulada y detalles
+ */
+export const probabilidadAcumuladaHipergeometrica = (N: number, M: number, n: number, k: number) => {
+  const kMin = Math.max(0, n - (N - M));
+  const kMax = Math.min(n, M);
+  
+  if (k < kMin || k > kMax) throw new Error(`k debe estar entre ${kMin} y ${kMax}`);
+  
+  let probabilidadTotal = 0;
+  const detalles = [];
+  
+  for (let i = kMin; i <= k; i++) {
+    const calculo = probabilidadHipergeometrica(N, M, n, i);
+    probabilidadTotal += calculo.probabilidad;
+    detalles.push({
+      k: i,
+      probabilidad: calculo.probabilidad,
+      porcentaje: calculo.probabilidad * 100,
+      acumulada: probabilidadTotal,
+      porcentajeAcumulado: probabilidadTotal * 100
+    });
+  }
+  
+  return {
+    k,
+    probabilidadAcumulada: probabilidadTotal,
+    porcentajeAcumulado: probabilidadTotal * 100,
+    detalles,
+    pasos: [
+      {
+        nombre: 'Probabilidad Acumulada',
+        formula: `P(X ≤ ${k}) = Σ P(X=i) para i=${kMin} a ${k}`,
+        resultado: probabilidadTotal,
+        explicacion: `Suma acumulada de ${detalles.length} probabilidades = ${probabilidadTotal.toFixed(6)}`
+      }
+    ]
+  };
+};
+
+/**
+ * Calcula la probabilidad complementaria (cola derecha) de la distribución hipergeométrica
+ * Fórmula: P(X > k) = 1 - P(X ≤ k)
+ * 
+ * @param N - tamaño total de la población
+ * @param M - número de elementos de éxito en la población
+ * @param n - tamaño de la muestra
+ * @param k - número máximo de éxitos
+ * @returns objeto con la probabilidad complementaria
+ */
+export const probabilidadComplementariaHipergeometrica = (N: number, M: number, n: number, k: number) => {
+  const acumulada = probabilidadAcumuladaHipergeometrica(N, M, n, k);
+  const probabilidadComplementaria = 1 - acumulada.probabilidadAcumulada;
+  
+  return {
+    k,
+    probabilidadComplementaria,
+    porcentajeComplementario: probabilidadComplementaria * 100,
+    probabilidadAcumulada: acumulada.probabilidadAcumulada,
+    pasos: [
+      {
+        nombre: 'Probabilidad Complementaria',
+        formula: `P(X > ${k}) = 1 - P(X ≤ ${k})`,
+        resultado: probabilidadComplementaria,
+        explicacion: `1 - ${acumulada.probabilidadAcumulada.toFixed(6)} = ${probabilidadComplementaria.toFixed(6)}`
+      }
+    ]
+  };
+};

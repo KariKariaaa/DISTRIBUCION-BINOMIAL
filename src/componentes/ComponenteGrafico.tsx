@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+import { useState } from 'react';
 
 interface DatosGrafico {
   k: number;
@@ -25,12 +26,31 @@ interface ComponenteGraficoProps {
 }
 
 export default function ComponenteGrafico({ datos, k, k2}: ComponenteGraficoProps) {
+  const [factorExito, setFactorExito] = useState<number>(85.75);
+  
   const maxProbabilidad = Math.max(...datos.map(d => d.probabilidad));
+  
+  // Calcular probabilidades acumuladas
+  const datosConAcumulada = datos.map((dato, idx) => {
+    const acumulada = datos.slice(0, idx + 1).reduce((sum, d) => sum + d.probabilidad, 0);
+    return {
+      ...dato,
+      acumulada,
+      porcentajeAcumulado: acumulada * 100
+    };
+  });
+
+  // Encontrar el valor de X cuya probabilidad acumulada se aproxime más al factor de éxito
+  const xMasProximo = datosConAcumulada.reduce((prev, current) => {
+    const diffPrev = Math.abs(prev.porcentajeAcumulado - factorExito);
+    const diffCurrent = Math.abs(current.porcentajeAcumulado - factorExito);
+    return diffCurrent < diffPrev ? current : prev;
+  });
   
   // Encontrar el rango de k a mostrar (máximo 25 barras para mejor visualización)
   const inicio = Math.max(0, (k2 || k) - 5);
   const fin = Math.min(datos.length - 1, (k2 || k) + 15);
-  const datosVisibles = datos.slice(inicio, fin + 1).map((d) => ({
+  const datosVisibles = datosConAcumulada.slice(inicio, fin + 1).map((d) => ({
     ...d,
     nombre: `X=${d.k}`,
   }));
@@ -103,6 +123,24 @@ export default function ComponenteGrafico({ datos, k, k2}: ComponenteGraficoProp
 
         {/* Tabla de valores completa */}
         <div className="mt-6">
+          <div className="mb-4 flex items-center gap-4 bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
+            <label className="text-sm font-bold text-gray-700">
+              Factor de Éxito (% de aceptación):
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={factorExito}
+              onChange={(e) => setFactorExito(parseFloat(e.target.value) || 0)}
+              className="px-3 py-2 border-2 border-yellow-500 rounded-lg focus:outline-none focus:border-[#9D4EDD] w-24"
+            />
+            <span className="text-xs text-gray-600">
+              ✓ X = {xMasProximo.k} se aproxima más ({xMasProximo.porcentajeAcumulado.toFixed(2)}%)
+            </span>
+          </div>
+
           <h4 className="text-lg font-bold text-[#9D4EDD] mb-3">Tabla Completa de Valores</h4>
           <div className="overflow-y-auto max-h-96 border-2 border-[#9D4EDD] rounded-lg">
             <table className="w-full text-sm">
@@ -111,37 +149,52 @@ export default function ComponenteGrafico({ datos, k, k2}: ComponenteGraficoProp
                   <th className="px-4 py-3 text-left font-bold">X (éxitos)</th>
                   <th className="px-4 py-3 text-center font-bold">Probabilidad</th>
                   <th className="px-4 py-3 text-right font-bold">Porcentaje</th>
+                  <th className="px-4 py-3 text-right font-bold">Prob. Acumulada</th>
+                  <th className="px-4 py-3 text-right font-bold">% Acumulado</th>
                 </tr>
               </thead>
               <tbody>
-                {datos.map((dato, idx) => (
-                  <tr
-                    key={dato.k}
-                    className={`border-b transition ${
-                      dato.k === k
-                        ? 'bg-[#E0AAFF] font-bold'
-                        : idx % 2 === 0
-                        ? 'bg-gray-50'
-                        : 'bg-white'
-                    } hover:bg-[#E0AAFF]/30`}
-                  >
-                    <td className="px-4 py-2">
-                      {dato.k === k ? '► ' : ''}{dato.k}
-                    </td>
-                    <td className="px-4 py-2 text-center font-mono">{dato.probabilidad.toFixed(8)}</td>
-                    <td className="px-4 py-2 text-right">{dato.porcentaje.toFixed(4)}%</td>
-                  </tr>
-                ))}
+                {datosConAcumulada.map((dato, idx) => {
+                  const isSelected = dato.k === k;
+                  const isFactor = dato.k === xMasProximo.k;
+                  
+                  return (
+                    <tr
+                      key={dato.k}
+                      className={`border-b transition ${
+                        isSelected
+                          ? 'bg-[#E0AAFF] font-bold'
+                          : isFactor
+                          ? 'bg-yellow-100 font-semibold'
+                          : idx % 2 === 0
+                          ? 'bg-gray-50'
+                          : 'bg-white'
+                      } hover:bg-[#E0AAFF]/30`}
+                    >
+                      <td className="px-4 py-2">
+                        {isSelected && '► '}{isFactor && '* '}{dato.k}
+                      </td>
+                      <td className="px-4 py-2 text-center font-mono">{dato.probabilidad.toFixed(8)}</td>
+                      <td className="px-4 py-2 text-right">{dato.porcentaje.toFixed(4)}%</td>
+                      <td className="px-4 py-2 text-right font-mono">{dato.acumulada.toFixed(8)}</td>
+                      <td className="px-4 py-2 text-right font-bold text-[#9D4EDD]">{dato.porcentajeAcumulado.toFixed(4)}%</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
 
         {/* Información */}
-        <div className="bg-white border-l-4 border-[#3A86FF] rounded-lg p-4">
+        <div className="bg-white border-l-4 border-[#3A86FF] rounded-lg p-4 space-y-2">
           <p className="text-sm text-gray-700">
-            <span className="font-bold text-[#9D4EDD]">Barra destacada:</span> Representa el valor de X seleccionado ({k}).
-            <br />
+            <span className="font-bold text-[#9D4EDD]">Barra destacada (►):</span> Representa el valor de X seleccionado ({k}).
+          </p>
+          <p className="text-sm text-gray-700">
+            <span className="font-bold text-yellow-600">Fila destacada (*):</span> Representa el valor de X cuya probabilidad acumulada se aproxima más al factor de éxito ({factorExito.toFixed(2)}%).
+          </p>
+          <p className="text-sm text-gray-700">
             <span className="font-bold text-[#9D4EDD]">Suma total:</span> Todas las probabilidades suman exactamente 100%.
           </p>
         </div>
