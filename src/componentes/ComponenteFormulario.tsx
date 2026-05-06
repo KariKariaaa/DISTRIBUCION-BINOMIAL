@@ -1,3 +1,4 @@
+//ComponenteFormulario.tsx
 import React, { useState } from 'react';
 import {
   distribucionBinomialCompleta,
@@ -21,9 +22,18 @@ import {
   calcularSesgoHipergeometrica,
   calcularCurtosisHipergeometrica
 } from '../utilidades/hipergeometrica';
+import {
+  distribucionPoissonCompleta,
+  probabilidadPoisson,
+  calcularMediaPoisson,
+  calcularDesviacionEstandarPoisson,
+  calcularSesgoPoisson,
+  calcularCurtosisPoisson
+} from '../utilidades/poisson';
 import ComponenteResultados from './ComponenteResultados';
 import ComponenteGrafico from './ComponenteGrafico';
 import ComponentePasosCalculo from './ComponentePasosCalculo';
+import TablaComparativaPoisson from './TablaComparativaPoisson';
 
 export default function ComponenteFormulario() {
   const [n, setN] = useState<number>(10);
@@ -33,6 +43,7 @@ export default function ComponenteFormulario() {
   const [k, setK] = useState<number>(5);
   const [k2, setK2] = useState<number>();
   const [mostrarPasos, setMostrarPasos] = useState(false);
+  const [usarPoissonApproximacion, setUsarPoissonApproximacion] = useState(false);
   const [resultados, setResultados] = useState<any>(null);
 
   const handleCalcular = (e: React.FormEvent) => {
@@ -91,6 +102,25 @@ export default function ComponenteFormulario() {
         // Calcular curtosis
         const curtosis = calcularCurtosisHipergeometrica(N!, M, n);
         
+        // Calcular Poisson como aproximación si está activado
+        let distribucionPoisson = null;
+        let probKPoisson = null;
+        let mediaPoisson = null;
+        let desviacionPoisson = null;
+        let sesgoPoisson = null;
+        let curtosisPoisson = null;
+        
+        if (usarPoissonApproximacion) {
+          // Usar p = M/N como aproximación
+          const lambda = n * (M / N!);
+          distribucionPoisson = distribucionPoissonCompleta(lambda);
+          probKPoisson = probabilidadPoisson(lambda, k);
+          mediaPoisson = calcularMediaPoisson(lambda);
+          desviacionPoisson = calcularDesviacionEstandarPoisson(lambda);
+          sesgoPoisson = calcularSesgoPoisson(lambda);
+          curtosisPoisson = calcularCurtosisPoisson(lambda);
+        }
+        
         setResultados({
           n,
           M,
@@ -104,7 +134,14 @@ export default function ComponenteFormulario() {
           media,
           desviacion,
           sesgo,
-          curtosis
+          curtosis,
+          usarPoissonApproximacion,
+          distribucionPoisson,
+          probKPoisson,
+          mediaPoisson,
+          desviacionPoisson,
+          sesgoPoisson,
+          curtosisPoisson
         });
       } else {
         // Usar distribución binomial
@@ -149,6 +186,24 @@ export default function ComponenteFormulario() {
         // Calcular curtosis
         const curtosis = calcularCurtosis(n, p, N);
         
+        // Calcular Poisson como aproximación si está activado
+        let distribucionPoisson = null;
+        let probKPoisson = null;
+        let mediaPoisson = null;
+        let desviacionPoisson = null;
+        let sesgoPoisson = null;
+        let curtosisPoisson = null;
+        
+        if (usarPoissonApproximacion) {
+          const lambda = n * p;
+          distribucionPoisson = distribucionPoissonCompleta(lambda);
+          probKPoisson = probabilidadPoisson(lambda, k);
+          mediaPoisson = calcularMediaPoisson(lambda);
+          desviacionPoisson = calcularDesviacionEstandarPoisson(lambda);
+          sesgoPoisson = calcularSesgoPoisson(lambda);
+          curtosisPoisson = calcularCurtosisPoisson(lambda);
+        }
+        
         setResultados({
           n,
           p,
@@ -164,7 +219,14 @@ export default function ComponenteFormulario() {
           desviacion,
           factorCorreccion,
           sesgo,
-          curtosis
+          curtosis,
+          usarPoissonApproximacion,
+          distribucionPoisson,
+          probKPoisson,
+          mediaPoisson,
+          desviacionPoisson,
+          sesgoPoisson,
+          curtosisPoisson
         });
       }
       
@@ -288,6 +350,21 @@ export default function ComponenteFormulario() {
                 <p className="text-xs text-gray-500 mt-1">Rango: P(k ≤ X ≤ k₂)</p>
               </div>
 
+              <div className="mb-6 p-4 bg-cyan-50 rounded-lg border-2 border-cyan-300">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={usarPoissonApproximacion}
+                    onChange={(e) => setUsarPoissonApproximacion(e.target.checked)}
+                    className="w-5 h-5 cursor-pointer accent-[#9D4EDD]"
+                  />
+                  <span className="font-semibold text-gray-700">Comparar con Poisson como aproximación</span>
+                </label>
+                <p className="text-xs text-gray-600 mt-2">
+                  Muestra resultados paralelos de la distribución de Poisson para comparación
+                </p>
+              </div>
+
               <button
                 type="submit"
                 className="w-full bg-[#312c2c] text-white font-bold py-3 rounded-lg hover:shadow-lg transform hover:scale-105 transition"
@@ -317,6 +394,8 @@ export default function ComponenteFormulario() {
                 </div>
 
                 <ComponenteGrafico datos={resultados.distribucion} k={k} k2={k2} rango={resultados.rango} p={p} />
+
+                <TablaComparativaPoisson resultados={resultados} />
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-xl p-8 text-center border-l-4 border-[#3A86FF]">

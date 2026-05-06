@@ -1,3 +1,4 @@
+//ComponenteResultados.tsx
 interface ResultadosProps {
   resultados: any;
 }

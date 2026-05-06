@@ -1,4 +1,4 @@
-// Funciones para calcular la distribución binomial
+// distribucionBinomial.ts
 
 /**
  * Calcula el factorial de un número
@@ -45,11 +45,11 @@ export const esPopulacionInfinita = (muestra: number, poblacion?: number): boole
 
 export const esHipergeometica = (muestra: number, poblacion?: number): boolean => {
   if (poblacion === undefined || poblacion === null) {
-    return true; // No existe población
+    return false; // Sin población definida, usar binomial
   }
   
   const porcentaje = muestra / poblacion;
-  return porcentaje < 0.20;
+  return porcentaje > 0.05; // Usar hipergeométrica cuando n > 5% de N
 };
 /**
  * Calcula la probabilidad de exactamente k éxitos en n ensayos

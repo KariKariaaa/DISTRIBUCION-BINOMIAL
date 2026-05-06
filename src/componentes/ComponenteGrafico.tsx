@@ -1,3 +1,4 @@
+// ComponenteGrafico.tsx
 import {
   BarChart,
   Bar,

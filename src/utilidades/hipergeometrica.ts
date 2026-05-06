@@ -1,4 +1,4 @@
-// Funciones para calcular la distribución hipergeométrica
+// hipergeometrica.ts
 
 /**
  * Calcula el factorial de un número
